@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "uuid": "uuid-proto",
+      "name": "name-proto",
+      "contacts": ["uuid-proto-second"]
+    },
+    {
+      "uuid": "uuid-proto-second",
+      "name": "name-proto-second",
+      "contacts": ["uuid-proto"]
+    }
+  ]
+}
