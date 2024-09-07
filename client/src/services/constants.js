@@ -1,0 +1,1 @@
+export const VAPID_KEY = 'BO8t_iSuUTFBjhJBlcJlDu76Xe0uNGnOn8jETuoxhurSsq7KMgHRkfwQr0ZsCUIczRZoKMK5NSYXkUlwlWqd0r4'
