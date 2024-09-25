@@ -1,12 +1,12 @@
 {
   "name": "webrtc-calls-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.mjs",
   "type": "module",
   "scripts": {
-    "dev": "node index.js --watch",
-    "generate-keys": "node generate-keys.js",
-    "test-ws": "node ./my-testing/wss.js --watch"
+    "dev": "node index.mjs --watch",
+    "generate-keys": "node generate-keys.mjs",
+    "test-ws": "node ./my-testing/wss.mjs --watch"
   },
   "author": "",
   "license": "ISC",
