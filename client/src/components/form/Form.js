@@ -1,35 +1,28 @@
-import { createComponent } from "crs-arch"
-import { ws } from "../../services/websocket"
+import { createComponent } from "crs-arch";
 
-export const Form = () => {
+export const Form = ({ handleSubmit }) => {
   return createComponent({
-    tag: 'form',
+    tag: "form",
     events: {
-      submit: (evt) => {
-        evt.preventDefault()
-        const data = new FormData(evt.target)
-        const username = data.get('username');
-        console.log('formdata: ', username);
-        ws.send(JSON.stringify({
-          name: username
-        }));
-      }
+      submit: handleSubmit || undefined,
     },
     children: [
       createComponent({
-        tag: 'label',
-        content: 'Input username',
-        children: [createComponent({
-          tag: 'input',
-          name: 'username',
-          placeholder: 'Username'
-        })]
+        tag: "label",
+        content: "Input username",
+        children: [
+          createComponent({
+            tag: "input",
+            name: "username",
+            placeholder: "Username",
+          }),
+        ],
       }),
       createComponent({
-        tag: 'button',
-        content: 'Submit',
-        type: 'submit'
-      })
-    ]
-  })
-}
+        tag: "button",
+        content: "Submit",
+        type: "submit",
+      }),
+    ],
+  });
+};
