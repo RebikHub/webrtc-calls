@@ -1,4 +1,4 @@
-export async function getMediaStream() {
+async function getMediaStream() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: true, // Включаем видео
@@ -11,7 +11,7 @@ export async function getMediaStream() {
   }
 }
 
-export async function addMediaToConnection(peerConnection, stream) {
+async function addMediaToConnection(peerConnection, stream) {
   stream.getTracks().forEach((track) => {
     peerConnection.addTrack(track, stream);
   });

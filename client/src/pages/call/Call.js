@@ -2,6 +2,7 @@ import { createComponent } from "crs-arch";
 import { LocalVideo, RemoteVideo } from "../../components/media/Video";
 import { endCall, startCall } from "../../services/websocket";
 import { Button } from "../../components/button/Button";
+import { setCallId } from "../../stores/call";
 
 export const Call = () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -11,10 +12,13 @@ export const Call = () => {
     content: `Call to: ${remoteUsername}`,
     children: [
       LocalVideo,
-      RemoteVideo,
+      // RemoteVideo,
       Button({
         title: "Начать звонок",
-        onClick: () => startCall(remoteUserId),
+        onClick: () => {
+          setCallId(remoteUserId);
+          startCall(remoteUserId);
+        },
       }),
       Button({ title: "Завершить звонок", onClick: endCall }),
     ],

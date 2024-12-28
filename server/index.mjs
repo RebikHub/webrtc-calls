@@ -1,12 +1,20 @@
-import { createServer } from "node:http";
+import { createServer } from "node:https";
+import { readFileSync } from "node:fs";
 import WebSocket from "./modules/websockets.mjs";
 import PushServer from "./modules/notifications.mjs";
 import SignalingServer from "./modules/signals.mjs";
 import ConnectionManager from "./modules/manager.mjs";
 
-const server = createServer();
+// Загрузка SSL-сертификатов
+const options = {
+  key: readFileSync("./certs/localhost+1-key.pem"), // Путь к приватному ключу
+  cert: readFileSync("./certs/localhost+1.pem"), // Путь к сертификату
+};
 
-const wsServer = new WebSocket(server);
+const server = createServer(options);
+const wsServer = new WebSocket(server, {
+  rejectUnauthorized: false,
+});
 const pushServer = new PushServer();
 const signalingServer = new SignalingServer(wsServer);
 const connectionManager = new ConnectionManager(

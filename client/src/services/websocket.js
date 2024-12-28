@@ -1,38 +1,74 @@
-import { WebRTCHandler } from "../modules/webRTC";
+import { RemoteVideo } from "../components/media/Video";
 import { router } from "../router/router";
+import { call } from "../stores/call";
 import { setContacts } from "../stores/contacts";
 import { setToastStatus } from "../stores/toast";
 import storage from "./storage";
+import {
+  createOffer,
+  getMediaStream,
+  handleAnswer,
+  handleCandidate,
+  handleOffer,
+} from "./webrtc";
 
-export const ws = new WebSocket(import.meta.env.VITE_WS);
-const peerConnection = new RTCPeerConnection();
+export const ws = new WebSocket(import.meta.env.VITE_WSS);
+export const peerConnection = new RTCPeerConnection({
+  iceServers: [
+    {
+      urls: [
+        "stun:stun.l.google.com:19305",
+        "stun:stun1.l.google.com:19305",
+        "stun:stun2.l.google.com:19305",
+        "stun:stun3.l.google.com:19305",
+        "stun:stun4.l.google.com:19305",
+        "stun:stun.services.mozilla.com",
+      ],
+    },
+  ],
+});
 
-const user = storage.get();
+console.log("Initial connection state:", peerConnection.connectionState);
+console.log("Initial signaling state:", peerConnection.signalingState);
+console.log("Initial ice connection state:", peerConnection.iceConnectionState);
 
-// // Создаем экземпляр WebRTCHandler
-// const webrtcHandler = new WebRTCHandler(ws);
+peerConnection.onicecandidate = (event) => {
+  console.log("onicecandidate: ", event);
 
-// // Начало звонка
-// export async function startCall(targetUserId) {
-//   const stream = await navigator.mediaDevices.getUserMedia({
-//     video: true,
-//     audio: true,
-//   });
-//   webrtcHandler.addLocalStream(stream);
+  if (event.candidate && call.state.id) {
+    ws.send(
+      JSON.stringify({
+        type: "ice-candidate",
+        candidate: event.candidate,
+        fromId: storage.get().id,
+        toId: call.state.id,
+      })
+    );
+  }
+};
 
-//   // Отправляем сигнал начала звонка через WebSocket
-//   ws.send(
-//     JSON.stringify({
-//       type: "call-init",
-//       targetUserId: targetUserId,
-//     })
-//   );
+peerConnection.ontrack = (event) => {
+  console.log("ontrack: ", event);
 
-//   // Создаем предложение (offer)
-//   webrtcHandler.createOffer();
-// }
+  const root = document.getElementById("root");
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (!remoteVideo && root) {
+    const element = RemoteVideo();
+    root.appendChild(element);
 
-// // Завершение звонка
+    console.log(element, event.streams, event.streams[0]);
+
+    if (element && event.streams && event.streams[0]) {
+      console.log("stream: ", event.streams[0]);
+
+      element.srcObject = event.streams[0];
+      element.setAttribute("playsinline", true);
+      element.play();
+    }
+  }
+};
+
+// Завершение звонка
 export function endCall() {
   peerConnection.close();
   const localVideo = document.getElementById("localVideo");
@@ -42,33 +78,42 @@ export function endCall() {
 }
 
 // Инициализация звонка
-export function startCall(to) {
-  peerConnection
-    .createOffer()
-    .then((offer) => peerConnection.setLocalDescription(offer))
-    .then(() => {
-      ws.send(
-        JSON.stringify({
-          type: "call",
-          from: user.id,
-          to,
-          sdp: peerConnection.localDescription,
-        })
-      );
-    });
+export async function startCall(toId) {
+  if (!peerConnection) {
+    console.log("peerConnection не существует");
+    return;
+  }
 
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      ws.send(
-        JSON.stringify({
-          type: "ice-candidate",
-          from: user.id,
-          to,
-          candidate: event.candidate,
-        })
-      );
-    }
-  };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.error("getUserMedia не поддерживается в этом браузере");
+    return;
+  }
+
+  const stream = await getMediaStream();
+
+  const localVideo = document.getElementById("localVideo");
+  if (localVideo) localVideo.srcObject = stream;
+
+  stream.getTracks().forEach((track) => {
+    console.log("track: ", track);
+    console.log("stream: ", stream);
+
+    peerConnection.addTrack(track, stream);
+  });
+
+  try {
+    const offer = await createOffer(peerConnection);
+    ws.send(
+      JSON.stringify({
+        type: "call",
+        fromId: storage.get().id,
+        toId,
+        offer,
+      })
+    );
+  } catch (error) {
+    console.error("Ошибка при получении медиапотока:", error);
+  }
 }
 
 ws.onopen = () => {
@@ -89,61 +134,24 @@ ws.onmessage = (event) => {
     setContacts(data.contacts);
   }
 
-  // if (
-  //   data.type === "offer" ||
-  //   data.type === "answer" ||
-  //   data.type === "candidate"
-  // ) {
-  //   webrtcHandler.handleSignalingData(data);
-  // } else if (data.type === "call-init") {
-  //   const acceptCall = confirm(
-  //     `${data.callerUsername} звонит вам. Принять звонок?`
-  //   );
-  //   if (acceptCall) {
-  //     // Начать звонок
-  //     startCall(data.callerUserId);
-  //   }
-  // }
+  if (data.type === "offer") {
+    console.log("offer data: ", data);
+    handleOffer(data.offer, peerConnection).then((answer) => {
+      console.log("type offer - answer: ", answer);
 
-  if (data.type === "call") {
-    const { from, sdp } = data;
-    // Обработка входящего звонка
-    const peerConnection = new RTCPeerConnection();
-    peerConnection
-      .setRemoteDescription(new RTCSessionDescription(sdp))
-      .then(() => peerConnection.createAnswer())
-      .then((answer) => peerConnection.setLocalDescription(answer))
-      .then(() => {
-        ws.send(
-          JSON.stringify({
-            type: "answer",
-            from: user.id,
-            to: from,
-            sdp: peerConnection.localDescription,
-          })
-        );
-      });
-
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        ws.send(
-          JSON.stringify({
-            type: "ice-candidate",
-            from: user.id,
-            to: from,
-            candidate: event.candidate,
-          })
-        );
-      }
-    };
+      ws.send(
+        JSON.stringify({
+          type: "answer",
+          answer,
+          fromId: storage.get().id,
+          toId: data.toId,
+        })
+      );
+    });
   } else if (data.type === "answer") {
-    const { from, sdp } = data;
-    // Обработка ответа на звонок
-    peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+    handleAnswer(data.answer, peerConnection);
   } else if (data.type === "ice-candidate") {
-    const { from, candidate } = data;
-    // Добавление ICE кандидата
-    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    handleCandidate(data.candidate, peerConnection);
   }
 };
 
@@ -170,3 +178,63 @@ export const wSocket = (socket) => {
     };
   });
 };
+
+peerConnection.oniceconnectionstatechange = () => {
+  console.log(
+    "ICE connection state changed:",
+    peerConnection.iceConnectionState
+  );
+};
+
+peerConnection.onsignalingstatechange = () => {
+  console.log("Signaling state changed:", peerConnection.signalingState);
+};
+
+peerConnection.onconnectionstatechange = () => {
+  console.log("Connection state changed:", peerConnection.connectionState);
+};
+
+// Регистрация Service Worker для обработки push-уведомлений
+if ("serviceWorker" in navigator && "PushManager" in window) {
+  navigator.serviceWorker
+    .register("sw.js")
+    .then((registration) => {
+      console.log("Service Worker registered", registration);
+
+      // Подписка на push-уведомления
+      return registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY), // Вставьте здесь ваш публичный VAPID ключ
+      });
+    })
+    .then((subscription) => {
+      console.log("User is subscribed:", subscription);
+
+      // Отправьте объект подписки на сервер
+      ws.send(
+        JSON.stringify({
+          type: "subscribe",
+          subscription: subscription,
+        })
+      );
+    })
+    .catch((error) => {
+      console.error("Failed to subscribe the user: ", error);
+    });
+}
+
+// Вспомогательная функция для преобразования VAPID ключа из base64 в Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}

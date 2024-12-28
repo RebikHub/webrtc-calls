@@ -16,7 +16,6 @@ export default class WebSocket {
 
   handleMessage(ws, message) {
     const data = JSON.parse(message);
-    console.log("data: ", data);
 
     if (data.type === "register" && data.name?.trim() !== "") {
       const userId = crypto.randomUUID();
@@ -39,12 +38,12 @@ export default class WebSocket {
       );
     } else if (data.type === "authorization" && data.name?.trim() !== "") {
       const dataDb = readDB();
-      console.log("auth dataDb: ", dataDb);
 
       if (dataDb.length > 0) {
         const user = dataDb.find((item) => item.username === data.name);
+        if (!user) return;
 
-        this.clients.set(user.id, ws);
+        this.clients.set(user?.id, ws);
         ws.id = user.id;
         if (user) {
           const contacts = dataDb.filter((item) => item.username !== data.name);
@@ -66,38 +65,45 @@ export default class WebSocket {
         }
       }
     } else if (data.type === "call") {
-      const { from, to, sdp } = data;
-      const targetClient = this.clients.get(to);
-      if (targetClient) {
-        targetClient.send(
+      const wsClient = this.clients.get(data.toId);
+
+      console.log("call: ", { from: data.fromId, to: data.toId });
+
+      if (wsClient) {
+        wsClient.send(
           JSON.stringify({
-            type: "call",
-            from,
-            sdp,
+            type: "offer",
+            offer: data.offer,
+            fromId: data.toId,
+            toId: data.fromId,
           })
         );
       }
     } else if (data.type === "answer") {
-      const { from, to, sdp } = data;
-      const targetClient = this.clients.get(to);
-      if (targetClient) {
-        targetClient.send(
+      const wsClient = this.clients.get(data.toId);
+      console.log("answer: ", { from: data.fromId, to: data.toId });
+      if (wsClient) {
+        wsClient.send(
           JSON.stringify({
             type: "answer",
-            from,
-            sdp,
+            answer: data.answer,
+            fromId: data.toId,
+            toId: data.fromId,
           })
         );
       }
     } else if (data.type === "ice-candidate") {
-      const { from, to, candidate } = data;
-      const targetClient = this.clients.get(to);
-      if (targetClient) {
-        targetClient.send(
+      const wsClient = this.clients.get(data.toId);
+
+      console.log("ice-candidate: ", { from: data?.fromId, to: data?.toId });
+
+      if (wsClient) {
+        wsClient.send(
           JSON.stringify({
             type: "ice-candidate",
-            from,
-            candidate,
+            candidate: data.candidate,
+            from: data?.toId,
+            to: data?.fromId,
           })
         );
       }

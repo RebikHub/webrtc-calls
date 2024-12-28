@@ -10,7 +10,6 @@ export const LocalVideo = () => {
     tag: "video",
     id: "localVideo",
     autoplay: true,
-    muted: true,
   });
 };
 
