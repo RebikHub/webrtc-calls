@@ -6,6 +6,8 @@ import { contacts } from "../../stores/contacts";
 import "./style.css";
 
 export const Contacts = () => {
+  console.log("render Contacts");
+
   const user = storage.get();
 
   if (user?.username) {
@@ -50,6 +52,7 @@ export const Contacts = () => {
               content: `user-name: ${item.username}; user-id: ${item.id}`,
               events: {
                 click: () => {
+                  window.location.href = `/call?username=${item.username}&id=${item.id}`;
                   console.log(
                     `user-name: ${item.username}; user-id: ${item.id}`
                   );

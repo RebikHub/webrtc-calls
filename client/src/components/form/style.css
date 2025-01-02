@@ -1,0 +1,16 @@
+.form-container {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 20px;   
+}
+
+.form-container > label {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-container > label > input {
+    padding: 10px 15px;
+}

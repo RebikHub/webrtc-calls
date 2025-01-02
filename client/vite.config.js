@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-
+import eslint from "vite-plugin-eslint";
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
   server: {
@@ -17,6 +17,7 @@ export default defineConfig(({ command }) => ({
   base: command !== "serve" ? "/" : "/",
   plugins: [
     // viteBasicSslPlugin(),
+    eslint(),
     VitePWA({
       debug: true,
       registerType: "autoUpdate",

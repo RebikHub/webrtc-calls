@@ -3,6 +3,7 @@ import { router } from "../router/router";
 import { Toast } from "../components/toast/Toast";
 import storage from "../services/storage";
 import { ws, wSocket } from "../services/websocket";
+import "./style.css";
 
 export const Layout = () => {
   const item = storage.get();
@@ -24,6 +25,7 @@ export const Layout = () => {
 
   return router.layout(
     createComponent({
+      class: "layout",
       children: [Toast],
     })
   );

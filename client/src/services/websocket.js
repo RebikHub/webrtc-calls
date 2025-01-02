@@ -1,4 +1,3 @@
-import { RemoteVideo } from "../components/media/Video";
 import { router } from "../router/router";
 import { call } from "../stores/call";
 import { setContacts } from "../stores/contacts";
@@ -10,6 +9,7 @@ import {
   handleAnswer,
   handleCandidate,
   handleOffer,
+  stopMediaStream,
 } from "./webrtc";
 
 export const ws = new WebSocket(import.meta.env.VITE_WSS);
@@ -27,6 +27,8 @@ export const peerConnection = new RTCPeerConnection({
     },
   ],
 });
+
+let stream;
 
 console.log("Initial connection state:", peerConnection.connectionState);
 console.log("Initial signaling state:", peerConnection.signalingState);
@@ -50,21 +52,14 @@ peerConnection.onicecandidate = (event) => {
 peerConnection.ontrack = (event) => {
   console.log("ontrack: ", event);
 
-  const root = document.getElementById("root");
   const remoteVideo = document.getElementById("remoteVideo");
-  if (!remoteVideo && root) {
-    const element = RemoteVideo();
-    root.appendChild(element);
+  if (remoteVideo && event.streams && event.streams[0]) {
+    console.log("stream: ", event.streams[0]);
 
-    console.log(element, event.streams, event.streams[0]);
-
-    if (element && event.streams && event.streams[0]) {
-      console.log("stream: ", event.streams[0]);
-
-      element.srcObject = event.streams[0];
-      element.setAttribute("playsinline", true);
-      element.play();
-    }
+    remoteVideo.classList.add("remote-video__active");
+    remoteVideo.srcObject = event.streams[0];
+    remoteVideo.setAttribute("playsinline", true);
+    remoteVideo.play();
   }
 };
 
@@ -75,6 +70,16 @@ export function endCall() {
   const remoteVideo = document.getElementById("remoteVideo");
   if (localVideo) localVideo.srcObject = null;
   if (remoteVideo) remoteVideo.srcObject = null;
+
+  stopMediaStream(stream);
+
+  ws.send(
+    JSON.stringify({
+      type: "stop-call",
+      fromId: storage.get().id,
+      toId: call.state.id,
+    })
+  );
 }
 
 // Инициализация звонка
@@ -89,7 +94,7 @@ export async function startCall(toId) {
     return;
   }
 
-  const stream = await getMediaStream();
+  stream = await getMediaStream();
 
   const localVideo = document.getElementById("localVideo");
   if (localVideo) localVideo.srcObject = stream;
@@ -125,6 +130,10 @@ ws.onmessage = (event) => {
   console.log("Получено сообщение от сервера: ", data);
   setToastStatus(data.message);
 
+  if (data.type === "user-exists") {
+    router.navigate("/");
+  }
+
   if (data && data.status === "received") {
     storage.set(data.user);
   }
@@ -152,6 +161,14 @@ ws.onmessage = (event) => {
     handleAnswer(data.answer, peerConnection);
   } else if (data.type === "ice-candidate") {
     handleCandidate(data.candidate, peerConnection);
+  }
+
+  if (data.type === "stop-call") {
+    if (peerConnection) {
+      peerConnection.close();
+      stopMediaStream(stream);
+      router.navigate("/contacts");
+    }
   }
 };
 
@@ -204,7 +221,7 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
       // Подписка на push-уведомления
       return registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY), // Вставьте здесь ваш публичный VAPID ключ
+        applicationServerKey: urlBase64ToUint8Array("PUBLIC_KEY"), // Вставьте здесь ваш публичный VAPID ключ
       });
     })
     .then((subscription) => {
@@ -226,9 +243,7 @@ if ("serviceWorker" in navigator && "PushManager" in window) {
 // Вспомогательная функция для преобразования VAPID ключа из base64 в Uint8Array
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, "+")
-    .replace(/_/g, "/");
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
 
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);

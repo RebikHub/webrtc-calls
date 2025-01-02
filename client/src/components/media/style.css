@@ -1,0 +1,27 @@
+.videos-wrapper {
+    display: flex;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.remote-video {
+    /* display: none; */
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    margin: auto;
+}
+
+.remote-video__active {
+    display: flex;
+}
+
+.local-video {
+    display: flex;
+    position: absolute;
+    width: 16vw;
+    bottom: 5%;
+    right: 5%;
+    z-index: 2;
+}

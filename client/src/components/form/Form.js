@@ -1,8 +1,11 @@
 import { createComponent } from "crs-arch";
+import "./style.css";
+import { Button } from "../button/Button";
 
 export const Form = ({ handleSubmit }) => {
   return createComponent({
     tag: "form",
+    class: "form-container",
     events: {
       submit: handleSubmit || undefined,
     },
@@ -18,9 +21,8 @@ export const Form = ({ handleSubmit }) => {
           }),
         ],
       }),
-      createComponent({
-        tag: "button",
-        content: "Submit",
+      Button({
+        title: "Submit",
         type: "submit",
       }),
     ],

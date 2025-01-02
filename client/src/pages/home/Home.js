@@ -1,10 +1,12 @@
 import { createComponent } from "crs-arch";
 import { Form } from "../../components/form/Form";
-import { wSocket, ws } from "../../services/websocket";
-import storage from "../../services/storage";
+import { ws, wSocket } from "../../services/websocket";
 import { router } from "../../router/router";
+import { Navigation } from "../../components/navigation/Navigation";
 
 export const Home = () => {
+  console.log("render Home");
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const data = new FormData(event.target);
@@ -12,12 +14,14 @@ export const Home = () => {
     console.log("formdata: ", username);
 
     if (username) {
-      ws.send(
-        JSON.stringify({
-          name: username,
-          type: "authorization",
-        })
-      );
+      wSocket(ws).then((socket) => {
+        socket.send(
+          JSON.stringify({
+            name: username,
+            type: "authorization",
+          })
+        );
+      });
     } else {
       router.navigate("/registration");
     }
@@ -25,18 +29,6 @@ export const Home = () => {
 
   return createComponent({
     content: "Home page",
-    children: [
-      Form({ handleSubmit }),
-      createComponent({
-        tag: "button",
-        content: "Registration",
-        events: { click: () => router.navigate("/registration") },
-      }),
-      createComponent({
-        tag: "button",
-        content: "Contacts",
-        events: { click: () => router.navigate("/contacts") },
-      }),
-    ],
+    children: [Navigation, Form({ handleSubmit })],
   });
 };

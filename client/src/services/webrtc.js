@@ -1,13 +1,28 @@
 export async function getMediaStream() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true, // Включить эхоподавление
+        noiseSuppression: true, // Подавление шума
+        autoGainControl: true, // Автоматическая регулировка громкости
+      },
       video: true,
-      audio: true,
     });
     return stream;
   } catch (error) {
     console.error("Ошибка при получении медиапотока:", error);
   }
+}
+
+// Функция для остановки треков
+export function stopMediaStream(stream) {
+  if (!stream) return;
+
+  stream.getTracks().forEach((track) => {
+    track.stop();
+  });
+
+  stream = null;
 }
 
 export async function createOffer(peerConnection) {

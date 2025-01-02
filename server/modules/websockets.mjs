@@ -18,24 +18,38 @@ export default class WebSocket {
     const data = JSON.parse(message);
 
     if (data.type === "register" && data.name?.trim() !== "") {
-      const userId = crypto.randomUUID();
-      writeDB(userId, {
-        username: data.name,
-        id: userId,
-      });
-      this.clients.set(userId, ws);
-      ws.id = userId;
+      const dataDb = readDB();
 
-      ws.send(
-        JSON.stringify({
-          status: "received",
-          message: "Пользователь успешно создан",
-          user: {
-            username: data.name,
-            id: userId,
-          },
-        })
-      );
+      if (dataDb.length > 0) {
+        const user = dataDb.find((item) => item.username === data.name);
+        if (user) {
+          ws.send(
+            JSON.stringify({
+              status: "user-exists",
+              message: "Этот пользователь уже существует.",
+            })
+          );
+        }
+      } else {
+        const userId = crypto.randomUUID();
+        writeDB(userId, {
+          username: data.name,
+          id: userId,
+        });
+        this.clients.set(userId, ws);
+        ws.id = userId;
+
+        ws.send(
+          JSON.stringify({
+            status: "received",
+            message: "Пользователь успешно создан",
+            user: {
+              username: data.name,
+              id: userId,
+            },
+          })
+        );
+      }
     } else if (data.type === "authorization" && data.name?.trim() !== "") {
       const dataDb = readDB();
 
@@ -104,6 +118,15 @@ export default class WebSocket {
             candidate: data.candidate,
             from: data?.toId,
             to: data?.fromId,
+          })
+        );
+      }
+    } else if (data.type === "stop-call") {
+      const wsClient = this.clients.get(data.toId);
+      if (wsClient) {
+        wsClient.send(
+          JSON.stringify({
+            type: "stop-call",
           })
         );
       }

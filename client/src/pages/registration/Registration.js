@@ -1,6 +1,7 @@
 import { createComponent } from "crs-arch";
 import { Form } from "../../components/form/Form";
 import { ws } from "../../services/websocket";
+import { Navigation } from "../../components/navigation/Navigation";
 
 export const Registration = () => {
   const handleSubmit = (evt) => {
@@ -18,6 +19,6 @@ export const Registration = () => {
 
   return createComponent({
     content: "Registration page",
-    children: [Form({ handleSubmit })],
+    children: [Navigation, Form({ handleSubmit })],
   });
 };
